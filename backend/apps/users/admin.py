@@ -12,6 +12,15 @@ class UserAdmin(DjangoUserAdmin):
     list_filter = ("is_staff", "is_active", "date_joined")
     search_fields = ("email", "username", "display_name")
     ordering = ("-date_joined",)
+    add_fieldsets = (
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": ("email", "username", "password1", "password2"),
+            },
+        ),
+    )
 
     fieldsets = DjangoUserAdmin.fieldsets + (
         (
@@ -34,4 +43,3 @@ class FollowAdmin(admin.ModelAdmin):
     list_display = ("id", "follower", "following", "created_at")
     search_fields = ("follower__email", "following__email")
     autocomplete_fields = ("follower", "following")
-
