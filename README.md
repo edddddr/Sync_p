@@ -53,6 +53,11 @@ http://localhost:8000/api/docs/
 - `POST /api/bookmarks/`
 - `GET /api/ratings/`
 - `POST /api/ratings/`
+- `GET /api/notifications/`
+- `GET /api/notifications/?is_read=false`
+- `POST /api/notifications/{id}/mark-read/`
+- `POST /api/notifications/{id}/mark-unread/`
+- `POST /api/notifications/mark-all-read/`
 
 ## Place/Post Flow
 
@@ -60,3 +65,4 @@ http://localhost:8000/api/docs/
 2. Create a post with an image, caption, optional tags, and `place_id`.
 3. Browse public posts through `/api/posts/explore/`.
 4. Like, comment on, bookmark, and rate places around shared posts.
+5. Read and clear database-backed notifications from `/api/notifications/`.
