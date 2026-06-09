@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from apps.notifications.services import notify_place_rating
 from apps.places.models import Place
 from apps.ratings.models import PlaceRating
 from apps.users.models import User
@@ -20,6 +21,8 @@ def rate_place(
             "review": review,
         },
     )
+    if created:
+        notify_place_rating(actor=user, rating=rating)
     return rating, created
 
 
