@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.core.exceptions import ValidationError
 
+from apps.notifications.services import notify_post_like
 from apps.places.models import Place
 from apps.posts.models import Post, PostLike
 from apps.users.models import User
@@ -55,7 +56,10 @@ def update_post(*, post: Post, **post_data) -> Post:
 
 
 def like_post(*, user: User, post: Post) -> tuple[PostLike, bool]:
-    return PostLike.objects.get_or_create(user=user, post=post)
+    like, created = PostLike.objects.get_or_create(user=user, post=post)
+    if created:
+        notify_post_like(actor=user, post=post)
+    return like, created
 
 
 def unlike_post(*, user: User, post: Post) -> int:
