@@ -22,6 +22,7 @@ class NotificationViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
+    queryset = Notification.objects.none()
     serializer_class = NotificationSerializer
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend, OrderingFilter)
@@ -30,6 +31,11 @@ class NotificationViewSet(
     ordering = ("-created_at",)
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Notification.objects.none()
+        if not self.request.user.is_authenticated:
+            return Notification.objects.none()
+
         return Notification.objects.select_related("actor", "recipient").filter(
             recipient=self.request.user,
         )
