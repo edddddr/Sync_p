@@ -16,6 +16,7 @@ class BookmarkViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
+    queryset = Bookmark.objects.none()
     serializer_class = BookmarkSerializer
     permission_classes = (IsAuthenticated, IsOwnerOrReadOnly)
     filter_backends = (OrderingFilter,)
@@ -23,6 +24,11 @@ class BookmarkViewSet(
     ordering = ("-created_at",)
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Bookmark.objects.none()
+        if not self.request.user.is_authenticated:
+            return Bookmark.objects.none()
+
         return (
             Bookmark.objects.select_related("user", "post", "post__author", "post__place")
             .filter(user=self.request.user)
