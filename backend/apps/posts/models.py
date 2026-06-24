@@ -20,7 +20,6 @@ class Post(models.Model):
         on_delete=models.PROTECT,
         related_name="posts",
     )
-    image = models.ImageField(upload_to="posts/%Y/%m/")
     caption = models.TextField(blank=True)
     tags = models.JSONField(default=list, blank=True)
     latitude = models.DecimalField(
@@ -74,6 +73,36 @@ class Post(models.Model):
 
     def __str__(self) -> str:
         return f"{self.author} at {self.place}"
+
+
+class PostImage(models.Model):
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image = models.ImageField(upload_to="posts/%Y/%m/")
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("order", "id")
+        indexes = [
+            models.Index(fields=["post", "order"], name="posts_image_post_order_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("post", "order"),
+                name="unique_post_image_order",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(order__gte=0) & models.Q(order__lte=3),
+                name="post_image_order_range",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"image {self.order} for post {self.post_id}"
 
 
 class PostLike(models.Model):
