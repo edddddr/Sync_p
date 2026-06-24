@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import User
+from apps.users.services import sign_in_with_google
 
 
 class UserPublicSerializer(serializers.ModelSerializer):
@@ -85,3 +87,29 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_following_count(self, obj: User) -> int:
         return obj.following_relationships.count()
+
+
+class GoogleSignInSerializer(serializers.Serializer):
+    id_token = serializers.CharField(required=False, write_only=True)
+    credential = serializers.CharField(required=False, write_only=True)
+    access = serializers.CharField(read_only=True)
+    refresh = serializers.CharField(read_only=True)
+    user = UserProfileSerializer(read_only=True)
+    created = serializers.BooleanField(read_only=True)
+
+    def validate(self, attrs: dict) -> dict:
+        token = attrs.get("id_token") or attrs.get("credential")
+        if not token:
+            raise serializers.ValidationError("Either id_token or credential is required.")
+        attrs["id_token"] = token
+        return attrs
+
+    def create(self, validated_data: dict) -> dict:
+        result = sign_in_with_google(id_token_value=validated_data["id_token"])
+        refresh = RefreshToken.for_user(result.user)
+        return {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": result.user,
+            "created": result.created,
+        }
