@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from apps.users.models import Follow, User
+from apps.users.models import Follow, SocialAccount, User
 
 
 @admin.register(User)
@@ -43,3 +43,11 @@ class FollowAdmin(admin.ModelAdmin):
     list_display = ("id", "follower", "following", "created_at")
     search_fields = ("follower__email", "following__email")
     autocomplete_fields = ("follower", "following")
+
+
+@admin.register(SocialAccount)
+class SocialAccountAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "provider", "email", "created_at")
+    list_filter = ("provider", "created_at")
+    search_fields = ("user__email", "user__username", "provider_user_id", "email")
+    autocomplete_fields = ("user",)
