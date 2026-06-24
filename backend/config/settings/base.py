@@ -161,6 +161,12 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+GOOGLE_OAUTH_CLIENT_IDS = config(
+    "GOOGLE_OAUTH_CLIENT_IDS",
+    default=config("GOOGLE_OAUTH_CLIENT_ID", default=""),
+    cast=Csv(),
+)
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "SyncP API",
     "DESCRIPTION": "API for discovering real places shared by real people.",
