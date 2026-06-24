@@ -31,6 +31,7 @@ class PlaceCategory(models.TextChoices):
     HIDDEN_SPOT = "hidden_spot", "Hidden spot"
     TOURIST = "tourist", "Tourist place"
     RESTAURANT = "restaurant", "Restaurant"
+    Museum = "museum", "Museum"
     OTHER = "other", "Other"
 
 
@@ -96,6 +97,6 @@ class Place(models.Model):
             self.slug = build_unique_place_slug(self)
         super().save(*args, **kwargs)
 
-    def __str__(self) -> str:
-        location = ", ".join(part for part in (self.city, self.country) if part)
-        return f"{self.name} ({location})" if location else self.name
+    # def __str__(self) -> str:
+    #     location = ", ".join(part for part in (self.city, self.country) if part)
+    #     return f"{self.name} ({location})" if location else self.name
