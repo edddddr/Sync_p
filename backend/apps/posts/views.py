@@ -27,7 +27,11 @@ class PostViewSet(viewsets.ModelViewSet):
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        queryset = Post.objects.select_related("author", "place", "place__created_by")
+        queryset = Post.objects.select_related(
+            "author",
+            "place",
+            "place__created_by",
+        ).prefetch_related("images")
 
         if self.request.user.is_authenticated:
             return queryset.filter(Q(is_public=True) | Q(author=self.request.user))
