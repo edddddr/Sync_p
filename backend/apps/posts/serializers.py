@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from apps.places.models import Place
 from apps.places.serializers import PlaceSerializer
-from apps.posts.models import Post
+from apps.posts.models import Post, PostImage
 from apps.posts.services import create_post, normalize_tags, update_post
 from apps.users.serializers import UserPublicSerializer
 
@@ -17,6 +17,8 @@ def validation_detail(exc: DjangoValidationError):
 class PostReadSerializer(serializers.ModelSerializer):
     author = UserPublicSerializer(read_only=True)
     place = PlaceSerializer(read_only=True)
+    images = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     likes_count = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
     bookmarks_count = serializers.SerializerMethodField()
@@ -29,6 +31,7 @@ class PostReadSerializer(serializers.ModelSerializer):
             "id",
             "author",
             "place",
+            "images",
             "image",
             "caption",
             "tags",
@@ -44,6 +47,19 @@ class PostReadSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = fields
+
+    def get_images(self, obj: Post) -> list[dict]:
+        return PostImageSerializer(
+            obj.images.all(),
+            many=True,
+            context=self.context,
+        ).data
+
+    def get_image(self, obj: Post) -> str | None:
+        first_image = next(iter(obj.images.all()), None)
+        if first_image is None:
+            return None
+        return PostImageSerializer(first_image, context=self.context).data["image"]
 
     def get_likes_count(self, obj: Post) -> int:
         return obj.likes.count()
@@ -78,12 +94,21 @@ class PostWriteSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
+    images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+        min_length=1,
+        max_length=4,
+    )
+    image = serializers.ImageField(write_only=True, required=False)
 
     class Meta:
         model = Post
         fields = (
             "id",
             "place_id",
+            "images",
             "image",
             "caption",
             "tags",
@@ -92,6 +117,15 @@ class PostWriteSerializer(serializers.ModelSerializer):
             "is_public",
         )
         read_only_fields = ("id",)
+
+    # def to_internal_value(self, data):
+    #     data = data.copy()
+    #     if "images" not in data and "image" in data:
+    #         if hasattr(data, "setlist"):
+    #             data.setlist("images", [data["image"]])
+    #         else:
+    #             data["images"] = [data["image"]]
+    #     return super().to_internal_value(data)
 
     def validate_tags(self, value: list[str]) -> list[str]:
         try:
@@ -102,20 +136,25 @@ class PostWriteSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict) -> dict:
         request = self.context.get("request")
         place = attrs.get("place")
+        images = attrs.get("images")
 
         if place and (not request or not request.user.is_authenticated):
             raise serializers.ValidationError("Authentication is required to create posts.")
+        if self.instance is None and not images:
+            raise serializers.ValidationError({"images": "At least one image is required."})
 
         return attrs
 
     def create(self, validated_data: dict) -> Post:
         request = self.context["request"]
+        validated_data.pop("image", None)
         try:
             return create_post(author=request.user, **validated_data)
         except DjangoValidationError as exc:
             raise serializers.ValidationError(validation_detail(exc)) from exc
 
     def update(self, instance: Post, validated_data: dict) -> Post:
+        validated_data.pop("image", None)
         try:
             return update_post(post=instance, **validated_data)
         except DjangoValidationError as exc:
@@ -123,3 +162,10 @@ class PostWriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: Post) -> dict:
         return PostReadSerializer(instance, context=self.context).data
+
+
+class PostImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostImage
+        fields = ("id", "image", "order")
+        read_only_fields = fields
