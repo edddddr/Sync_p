@@ -9,12 +9,22 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.users.models import User
-from apps.users.serializers import RegisterSerializer, UserProfileSerializer, UserPublicSerializer
+from apps.users.serializers import (
+    GoogleSignInSerializer,
+    RegisterSerializer,
+    UserProfileSerializer,
+    UserPublicSerializer,
+)
 from apps.users.services import follow_user, unfollow_user
 
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
+    permission_classes = (AllowAny,)
+
+
+class GoogleSignInView(generics.CreateAPIView):
+    serializer_class = GoogleSignInSerializer
     permission_classes = (AllowAny,)
 
 
