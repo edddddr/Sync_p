@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from apps.notifications.services import notify_post_like
 from apps.places.models import Place
-from apps.posts.models import Post, PostLike
+from apps.posts.models import Post, PostImage, PostLike
 from apps.users.models import User
 
 
@@ -30,7 +31,21 @@ def normalize_tags(tags: list[str] | None) -> list[str]:
     return normalized
 
 
-def create_post(*, author: User, place: Place, **post_data) -> Post:
+def validate_post_images(images: list | None, *, required: bool) -> list:
+    if not images:
+        if required:
+            raise ValidationError("Posts must include at least 1 image.")
+        return []
+
+    if len(images) > 4:
+        raise ValidationError("Posts can have at most 4 images.")
+
+    return images
+
+
+@transaction.atomic
+def create_post(*, author: User, place: Place, images: list, **post_data) -> Post:
+    images = validate_post_images(images, required=True)
     post_data["tags"] = normalize_tags(post_data.get("tags"))
     if post_data.get("latitude") is None:
         post_data["latitude"] = place.latitude
@@ -40,10 +55,12 @@ def create_post(*, author: User, place: Place, **post_data) -> Post:
     post = Post(author=author, place=place, **post_data)
     post.full_clean()
     post.save()
+    create_post_images(post=post, images=images)
     return post
 
 
-def update_post(*, post: Post, **post_data) -> Post:
+@transaction.atomic
+def update_post(*, post: Post, images: list | None = None, **post_data) -> Post:
     if "tags" in post_data:
         post_data["tags"] = normalize_tags(post_data.get("tags"))
 
@@ -52,7 +69,22 @@ def update_post(*, post: Post, **post_data) -> Post:
 
     post.full_clean()
     post.save()
+
+    if images is not None:
+        images = validate_post_images(images, required=True)
+        post.images.all().delete()
+        create_post_images(post=post, images=images)
+
     return post
+
+
+def create_post_images(*, post: Post, images: list) -> None:
+    PostImage.objects.bulk_create(
+        [
+            PostImage(post=post, image=image, order=index)
+            for index, image in enumerate(images)
+        ]
+    )
 
 
 def like_post(*, user: User, post: Post) -> tuple[PostLike, bool]:
