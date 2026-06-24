@@ -98,3 +98,36 @@ class Follow(models.Model):
     def __str__(self) -> str:
         return f"{self.follower} follows {self.following}"
 
+
+class SocialProvider(models.TextChoices):
+    GOOGLE = "google", "Google"
+    APPLE = "apple", "Apple"
+
+
+class SocialAccount(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="social_accounts",
+    )
+    provider = models.CharField(max_length=32, choices=SocialProvider.choices)
+    provider_user_id = models.CharField(max_length=255)
+    email = models.EmailField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("provider", "created_at")
+        indexes = [
+            models.Index(fields=["provider", "provider_user_id"], name="users_social_provider_uid_idx"),
+            models.Index(fields=["email"], name="users_social_email_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("provider", "provider_user_id"),
+                name="unique_social_account_provider_user",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.provider}:{self.provider_user_id}"
